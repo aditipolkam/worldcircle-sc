@@ -36,7 +36,8 @@ contract WorldCircleTest is Test {
     function testCreateEvent() public {
         uint256 eventId = wc.createEvent("ETHConf", "2025-10-01", "Convention Center", "Pune");
 
-        (uint256 id, string memory name, , string memory venue, string memory location, address creator, bool exists) = wc.events(eventId);
+        (uint256 id, string memory name,, string memory venue, string memory location, address creator, bool exists) =
+            wc.events(eventId);
 
         assertEq(id, eventId);
         assertEq(name, "ETHConf");
@@ -46,17 +47,17 @@ contract WorldCircleTest is Test {
         assertTrue(exists);
     }
 
-function testRegisterForEvent() public {
-    uint256 eventId = wc.createEvent("Hackathon", "2025-11-01", "Auditorium", "Delhi");
+    function testRegisterForEvent() public {
+        uint256 eventId = wc.createEvent("Hackathon", "2025-11-01", "Auditorium", "Delhi");
 
-    wc.registerForEvent(alice, eventId);
-    wc.registerForEvent(bob, eventId);
+        wc.registerForEvent(alice, eventId);
+        wc.registerForEvent(bob, eventId);
 
-    uint256[] memory participants = wc.getEventParticipants(eventId);
-    assertEq(participants.length, 2);
-    assertEq(participants[0], alice);
-    assertEq(participants[1], bob);
-}
+        uint256[] memory participants = wc.getEventParticipants(eventId);
+        assertEq(participants.length, 2);
+        assertEq(participants[0], alice);
+        assertEq(participants[1], bob);
+    }
 
     function testAddConnection() public {
         uint256 eventId = wc.createEvent("DevCon", "2025-12-01", "Expo Hall", "Bangalore");

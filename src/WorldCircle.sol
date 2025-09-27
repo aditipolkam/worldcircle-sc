@@ -38,30 +38,20 @@ contract WorldCircle {
 
     /* ------------------------ PERSON LOGIC ------------------------ */
 
-    function registerPerson(
-        uint256 worldId,
-        string calldata name,
-        string calldata bio,
-        string calldata company
-    ) external {
+    function registerPerson(uint256 worldId, string calldata name, string calldata bio, string calldata company)
+        external
+    {
         require(!people[worldId].exists, "Person already registered");
 
-        people[worldId] = Person({
-            name: name,
-            bio: bio,
-            company: company,
-            exists: true
-        });
+        people[worldId] = Person({name: name, bio: bio, company: company, exists: true});
     }
 
     /* ------------------------ EVENT LOGIC ------------------------ */
 
-    function createEvent(
-        string calldata name,
-        string calldata date,
-        string calldata venue,
-        string calldata location
-    ) external returns (uint256) {
+    function createEvent(string calldata name, string calldata date, string calldata venue, string calldata location)
+        external
+        returns (uint256)
+    {
         uint256 eventId = nextEventId++;
         events[eventId] = Event({
             id: eventId,
@@ -84,11 +74,7 @@ contract WorldCircle {
 
     /* ------------------------ CONNECTIONS LOGIC ------------------------ */
 
-    function addConnection(
-        uint256 yourWorldId,
-        uint256 otherWorldId,
-        uint256 eventId
-    ) external {
+    function addConnection(uint256 yourWorldId, uint256 otherWorldId, uint256 eventId) external {
         require(people[yourWorldId].exists, "You are not registered");
         require(people[otherWorldId].exists, "Other person not registered");
         require(events[eventId].exists, "Event not found");
@@ -105,33 +91,21 @@ contract WorldCircle {
         }
     }
 
-    function getConnections(uint256 worldId)
-        external
-        view
-        returns (uint256[] memory)
-    {
+    function getConnections(uint256 worldId) external view returns (uint256[] memory) {
         return allConnections[worldId];
     }
 
-    function getConnectionsByEvent(uint256 worldId, uint256 eventId)
-        external
-        view
-        returns (uint256[] memory)
-    {
+    function getConnectionsByEvent(uint256 worldId, uint256 eventId) external view returns (uint256[] memory) {
         return connections[worldId][eventId];
     }
 
-		function getEventParticipants(uint256 eventId) external view returns (uint256[] memory) {
-    	return eventParticipants[eventId];
-		}
+    function getEventParticipants(uint256 eventId) external view returns (uint256[] memory) {
+        return eventParticipants[eventId];
+    }
 
     /* ------------------------ HELPERS ------------------------ */
 
-    function _isAlreadyConnected(uint256 worldId, uint256 otherWorldId)
-        internal
-        view
-        returns (bool)
-    {
+    function _isAlreadyConnected(uint256 worldId, uint256 otherWorldId) internal view returns (bool) {
         uint256[] memory conns = allConnections[worldId];
         for (uint256 i = 0; i < conns.length; i++) {
             if (conns[i] == otherWorldId) return true;
