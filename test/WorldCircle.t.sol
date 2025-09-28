@@ -1,75 +1,103 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "forge-std/Test.sol";
-import "../src/WorldCircle.sol";
+import { Test } from "forge-std/Test.sol";
+import { WorldCircle } from "../src/WorldCircle.sol";
+
 
 contract WorldCircleTest is Test {
     WorldCircle wc;
 
-    // Example worldIds
-    uint256 alice = 1;
-    uint256 bob = 2;
-    uint256 charlie = 3;
+    // Mock addresses
+    address alice = address(0x1);
+    address bob = address(0x2);
+    address charlie = address(0x3);
 
     function setUp() public {
         wc = new WorldCircle();
 
-        // Register some people
-        wc.registerPerson(alice, "Alice", "Bio A", "Company A");
-        wc.registerPerson(bob, "Bob", "Bio B", "Company B");
-        wc.registerPerson(charlie, "Charlie", "Bio C", "Company C");
+        // Register some people from their addresses
+        vm.prank(alice);
+        wc.registerPerson("alice.world", "Alice", "Bio A", "Pune", "Company A");
+
+        vm.prank(bob);
+        wc.registerPerson("bob.world", "Bob", "Bio B", "Delhi", "Company B");
+
+        vm.prank(charlie);
+        wc.registerPerson("charlie.world", "Charlie", "Bio C", "Goa", "Company C");
     }
 
     function testRegisterPerson() public {
-        uint256 david = 4;
-        wc.registerPerson(david, "David", "Bio D", "Company D");
+        address david = address(0x4);
 
-        (string memory name, string memory bio, string memory company, bool exists) = wc.people(david);
+        vm.prank(david);
+        wc.registerPerson("david.world", "David", "Bio D", "Hyd", "Company D");
 
+        (
+            string memory worldId,
+            string memory name,
+            string memory bio,
+            string memory location,
+            string memory company,
+            bool isSelfVerified
+        ) = wc.people(david);
+
+        assertEq(worldId, "david.world");
         assertEq(name, "David");
         assertEq(bio, "Bio D");
+        assertEq(location, "Hyd");
         assertEq(company, "Company D");
-        assertTrue(exists);
+        assertFalse(isSelfVerified);
     }
 
     function testCreateEvent() public {
-        uint256 eventId = wc.createEvent("ETHConf", "2025-10-01", "Convention Center", "Pune");
+        uint256 eventId =
+            wc.createEvent("ETHConf", "Biggest Ethereum Conf", "2025-10-01", "Convention Center");
 
-        (uint256 id, string memory name,, string memory venue, string memory location, address creator, bool exists) =
+        (uint256 id, string memory name, string memory about, string memory date, string memory venue, address creator) =
             wc.events(eventId);
 
         assertEq(id, eventId);
         assertEq(name, "ETHConf");
+        assertEq(about, "Biggest Ethereum Conf");
+        assertEq(date, "2025-10-01");
         assertEq(venue, "Convention Center");
-        assertEq(location, "Pune");
         assertEq(creator, address(this));
-        assertTrue(exists);
     }
 
     function testRegisterForEvent() public {
-        uint256 eventId = wc.createEvent("Hackathon", "2025-11-01", "Auditorium", "Delhi");
+        uint256 eventId =
+            wc.createEvent("Hackathon", "Build fast", "2025-11-01", "Auditorium");
 
-        wc.registerForEvent(alice, eventId);
-        wc.registerForEvent(bob, eventId);
+        vm.prank(alice);
+        wc.registerForEvent(eventId);
 
-        uint256[] memory participants = wc.getEventParticipants(eventId);
+        vm.prank(bob);
+        wc.registerForEvent(eventId);
+
+        address[] memory participants = wc.getEventParticipants(eventId);
         assertEq(participants.length, 2);
         assertEq(participants[0], alice);
         assertEq(participants[1], bob);
     }
 
     function testAddConnection() public {
-        uint256 eventId = wc.createEvent("DevCon", "2025-12-01", "Expo Hall", "Bangalore");
+        uint256 eventId =
+            wc.createEvent("DevCon", "Builders unite", "2025-12-01", "Expo Hall");
 
-        wc.registerForEvent(alice, eventId);
-        wc.registerForEvent(bob, eventId);
+        vm.prank(alice);
+        wc.registerForEvent(eventId);
 
-        wc.addConnection(alice, bob, eventId);
+        vm.prank(bob);
+        wc.registerForEvent(eventId);
+
+        // Alice connects to Bob
+        vm.prank(alice);
+        wc.addConnection(bob, eventId);
 
         // Check all connections
-        uint256[] memory aliceConns = wc.getConnections(alice);
-        uint256[] memory bobConns = wc.getConnections(bob);
+        address[] memory aliceConns = wc.getConnections(alice);
+        address[] memory bobConns = wc.getConnections(bob);
 
         assertEq(aliceConns.length, 1);
         assertEq(bobConns.length, 1);
@@ -77,26 +105,31 @@ contract WorldCircleTest is Test {
         assertEq(bobConns[0], alice);
 
         // Check event-wise connections
-        uint256[] memory aliceEventConns = wc.getConnectionsByEvent(alice, eventId);
+        address[] memory aliceEventConns = wc.getConnectionsByEvent(alice, eventId);
         assertEq(aliceEventConns.length, 1);
         assertEq(aliceEventConns[0], bob);
     }
 
     function testCannotConnectToSelf() public {
-        uint256 eventId = wc.createEvent("Summit", "2025-09-30", "Grand Hall", "Mumbai");
+        uint256 eventId =
+            wc.createEvent("Summit", "Networking", "2025-09-30", "Grand Hall");
 
+        vm.prank(alice);
         vm.expectRevert("Cannot connect to yourself");
-        wc.addConnection(alice, alice, eventId);
+        wc.addConnection(alice, eventId);
     }
 
     function testDuplicateConnectionNotAddedTwice() public {
-        uint256 eventId = wc.createEvent("Meetup", "2025-10-05", "CoWork Hub", "Goa");
+        uint256 eventId =
+            wc.createEvent("Meetup", "Community vibes", "2025-10-05", "CoWork Hub");
 
-        wc.addConnection(alice, bob, eventId);
-        wc.addConnection(alice, bob, eventId); // should not duplicate
+        vm.startPrank(alice);
+        wc.addConnection(bob, eventId);
+        wc.addConnection(bob, eventId); // should not duplicate
+        vm.stopPrank();
 
-        uint256[] memory aliceConns = wc.getConnections(alice);
-        uint256[] memory bobConns = wc.getConnections(bob);
+        address[] memory aliceConns = wc.getConnections(alice);
+        address[] memory bobConns = wc.getConnections(bob);
 
         assertEq(aliceConns.length, 1);
         assertEq(bobConns.length, 1);
